@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: atlas-avis-bff
+  labels:
+    app: atlas-avis-bff
+    dxp.io/managed: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: atlas-avis-bff
+  template:
+    metadata:
+      labels:
+        app: atlas-avis-bff
+        backstage.io/kubernetes-id: atlas-avis-bff
+    spec:
+      nodeSelector:
+        role: workload
+      tolerations:
+      - key: role
+        operator: Equal
+        value: workload
+        effect: NoSchedule
+      containers:
+      - name: atlas-avis-bff
+        image: harbor.dxp/dxp/atlas-avis-bff:latest
+        imagePullPolicy: Always
+        envFrom:
+        # S105 -- token renomme (etait PLACEHOLDER_DB_SECRET, majuscules
+        # + underscore invalides pour un nom K8s -- RFC 1123 -- faisait
+        # echouer la sync ArgoCD pour TOUT service sans BDD liee, y compris
+        # ceux deja e2e-valides). Substitue par dxp-app-link-database.yaml
+        # uniquement si un service-ref database est ajoute apres coup.
+        - secretRef:
+            name: placeholder-db-secret
+            optional: true
+        env:
+        - name: ALLOWED_ORIGINS
+          value: ""
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: atlas-avis-bff
+spec:
+  selector:
+    app: atlas-avis-bff
+  ports:
+  - port: 80
+    targetPort: 3000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: atlas-avis-bff
+  labels:
+    app: atlas-avis-bff
+    dxp.io/managed: "true"
+spec:
+  ingressClassName: nginx
+  # S91 -- tls: sans secretName ajoute (chantier retrait HTTP). Necessaire
+  # pour que ssl-redirect=true (ConfigMap controleur ingress-nginx)
+  # produise un effet reel : la fonction certificate_configured_for_current_request()
+  # d'ingress-nginx (lua_ingress.lua) exige un cert explicitement enregistre
+  # pour CE host precis avant d'autoriser la redirection HTTP->HTTPS -- le
+  # default-ssl-certificate seul (dxp-platform-tls) ne suffit pas, meme s'il
+  # sert bien de fallback pour le handshake TLS lui-meme. Verifie en
+  # conditions reelles (S91, cristal-backend). Pas de secretName : continue
+  # a utiliser le certificat par defaut du controleur, ce bloc sert
+  # uniquement a enregistrer le host aupres du mecanisme de redirection.
+  tls:
+  - hosts:
+    - atlas-avis-bff.68.221.5.247.nip.io
+  rules:
+  - host: atlas-avis-bff.68.221.5.247.nip.io
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: atlas-avis-bff
+            port:
+              number: 80
