@@ -38,7 +38,7 @@ spec:
             optional: true
         env:
         - name: ALLOWED_ORIGINS
-          value: ""
+          value: "https://atlas-avis-web.68.221.5.247.nip.io:30444"
         ports:
         - containerPort: 3000
         resources:
