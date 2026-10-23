@@ -25,7 +25,7 @@ spec:
         effect: NoSchedule
       containers:
       - name: atlas-avis-bff
-        image: harbor.harbor.svc.cluster.local/dxp/atlas-avis-bff:340d0d0
+        image: harbor.harbor.svc.cluster.local/dxp/atlas-avis-bff:8f62c3f
         imagePullPolicy: Always
         envFrom:
         # S105 -- token renomme (etait PLACEHOLDER_DB_SECRET, majuscules
@@ -39,6 +39,12 @@ spec:
         env:
         - name: ALLOWED_ORIGINS
           value: 'https://atlas-avis-web-qualif.68.221.5.247.nip.io:30444,https://test-fe-qualif.68.221.5.247.nip.io:30444'
+        - name: ATLAS_AVIS_API_URL
+          value: 'http://atlas-avis-api.atlas-avis-api-qualif.svc.cluster.local'
+        - name: ATLAS_AVIS_LLM_URL
+          value: 'http://atlas-avis-llm.atlas-avis-llm-qualif.svc.cluster.local'
+        - name: DXP_DEPENDENCIES
+          value: '[{"name":"atlas-avis-api","nature":"pod","url":"http://atlas-avis-api.atlas-avis-api-qualif.svc.cluster.local"},{"name":"atlas-avis-llm","nature":"pod","url":"http://atlas-avis-llm.atlas-avis-llm-qualif.svc.cluster.local"}]'
         ports:
         - containerPort: 3000
         resources:
